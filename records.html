@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registros Guardados</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="records-container">
+            <h1 style="margin-bottom: 20px;">REGISTROS GUARDADOS</h1>
+            
+            <div class="search-box">
+                <input type="text" id="search-input" class="search-input" 
+                       placeholder="Buscar por nombre...">
+            </div>
+
+            <div class="button-container" style="margin-bottom: 20px;">
+                <a href="index.html" class="btn btn-primary">NUEVO REGISTRO</a>
+                <button type="button" id="btn-refresh" class="btn btn-secondary">ACTUALIZAR</button>
+            </div>
+
+            <table class="records-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>NOMBRE</th>
+                        <th>EDAD</th>
+                        <th>FECHA NACIMIENTO</th>
+                        <th>FECHA REGISTRO</th>
+                        <th>ACCIONES</th>
+                    </tr>
+                </thead>
+                <tbody id="records-body">
+                    <!-- Records will be loaded here -->
+                </tbody>
+            </table>
+
+            <div id="no-records" style="display: none; text-align: center; padding: 40px;">
+                No se encontraron registros.
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let allRecords = [];
+
+        window.addEventListener('load', function() {
+            loadRecords();
+        });
+
+        document.getElementById('btn-refresh').addEventListener('click', loadRecords);
+
+        document.getElementById('search-input').addEventListener('input', function(e) {
+            filterRecords(e.target.value);
+        });
+
+        function loadRecords() {
+            fetch('get_records.php')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        allRecords = data.records;
+                        displayRecords(allRecords);
+                    } else {
+                        console.error('Error loading records:', data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        }
+
+        function filterRecords(searchTerm) {
+            const filtered = allRecords.filter(record => 
+                record.nombre.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+            displayRecords(filtered);
+        }
+
+        function displayRecords(records) {
+            const tbody = document.getElementById('records-body');
+            const noRecords = document.getElementById('no-records');
+
+            if (records.length === 0) {
+                tbody.innerHTML = '';
+                noRecords.style.display = 'block';
+                return;
+            }
+
+            noRecords.style.display = 'none';
+            tbody.innerHTML = records.map(record => `
+                <tr>
+                    <td>${record.id}</td>
+                    <td>${record.nombre}</td>
+                    <td>${record.edad}</td>
+                    <td>${record.fecha_nacimiento}</td>
+                    <td>${record.created_at}</td>
+                    <td>
+                        <a href="index.html?id=${record.id}" class="btn btn-small btn-secondary">CARGAR</a>
+                        <button onclick="deleteRecord(${record.id})" class="btn btn-small btn-secondary">ELIMINAR</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function deleteRecord(id) {
+            if (confirm('Esta seguro de eliminar este registro?')) {
+                fetch('delete_record.php?id=' + id, {
+                    method: 'DELETE'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        loadRecords();
+                    } else {
+                        alert('Error al eliminar: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+            }
+        }
+    </script>
+</body>
+</html>
