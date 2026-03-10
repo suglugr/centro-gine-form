@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Medical Capture Station - Pedal Ready</title>
+    <style>
+        body { font-family: sans-serif; background: #1a1a1a; color: white; text-align: center; margin: 0; }
+        header { background: #333; padding: 15px; border-bottom: 2px solid #444; }
+        #camera-container { position: relative; width: 80%; max-width: 1280px; margin: 20px auto; }
+        video { width: 100%; border: 3px solid #555; border-radius: 8px; }
+        
+        /* Flash effect when taking a photo */
+        .flash { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: white; opacity: 0; pointer-events: none; }
+        .flash.active { animation: flash-animation 0.2s ease-out; }
+        @keyframes flash-animation { from { opacity: 1; } to { opacity: 0; } }
+
+        .controls { margin: 20px; }
+        button { padding: 15px 30px; font-size: 18px; cursor: pointer; background: #27ae60; color: white; border: none; border-radius: 5px; }
+        #gallery { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; padding: 20px; }
+        .thumb-container { width: 200px; border: 1px solid #444; padding: 5px; background: #222; }
+        img { width: 100%; height: auto; display: block; }
+        .label { font-size: 12px; margin-top: 5px; color: #aaa; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h2>Microscope Image Capture</h2>
+    <p>Pedal Status: <strong>Ready (Mapped to Key 'B')</strong></p>
+</header>
+
+<div id="camera-container">
+    <video id="video" autoplay playsinline></video>
+    <div id="flash-overlay" class="flash"></div>
+</div>
+
+<div class="controls">
+    <button id="snap-btn">Manual Snapshot</button>
+</div>
+
+<div id="gallery"></div>
+<canvas id="canvas" style="display:none;"></canvas>
+
+<script>
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const flash = document.getElementById('flash-overlay');
+    const gallery = document.getElementById('gallery');
+
+    // 1. Initialize Camera
+    async function init() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: { width: { ideal: 1920 }, height: { ideal: 1080 } }
+            });
+            video.srcObject = stream;
+        } catch (err) {
+            alert("Camera error: " + err.message);
+        }
+    }
+
+    // 2. Capture Function
+    function capture() {
+        // Trigger visual flash
+        flash.classList.remove('active');
+        void flash.offsetWidth; // Reset animation
+        flash.classList.add('active');
+
+        const ctx = canvas.getContext('2d');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0);
+
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
+        const timeStr = new Date().toLocaleTimeString();
+
+        // Add to Gallery
+        const div = document.createElement('div');
+        div.className = 'thumb-container';
+        div.innerHTML = `<img src="${dataUrl}"><div class="label">${timeStr}</div>`;
+        gallery.prepend(div);
+
+        // Auto-download (optional, helpful for server sync)
+        const link = document.createElement('a');
+        link.href = dataUrl;
+        link.download = `IMG_${Date.now()}.jpg`;
+        link.click();
+    }
+
+    // 3. PEDAL LISTENER - Mapping Key 'B'
+    window.addEventListener('keydown', (e) => {
+        // 'KeyB' handles both 'b' and 'B' regardless of Caps Lock
+        if (e.code === 'KeyB') {
+            e.preventDefault(); 
+            capture();
+        }
+    });
+
+    document.getElementById('snap-btn').onclick = capture;
+    init();
+</script>
+
+</body>
+</html>
